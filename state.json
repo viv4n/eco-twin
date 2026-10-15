@@ -1,6 +1,22 @@
 {
-  "lecture_hall_a": { "status": "normal", "occupancy": 30, "hvac": "active" },
-  "science_block": { "status": "normal", "water_flow": "stable" },
-  "cafeteria": { "status": "normal", "waste_level": "40%" },
-  "main_lot": { "status": "normal", "occupancy_rate": "68%" }
+  "_meta": {
+    "demo_mode": false
+  },
+  "lecture_hall_a": {
+    "status": "normal",
+    "occupancy": 30,
+    "hvac": "active"
+  },
+  "science_block": {
+    "status": "normal",
+    "water_flow": "stable"
+  },
+  "cafeteria": {
+    "status": "normal",
+    "waste_level": "40%"
+  },
+  "main_lot": {
+    "status": "normal",
+    "occupancy_rate": "68%"
+  }
 }
