@@ -1,108 +1,121 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Polygon, Tooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, Tooltip, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { campusZones, CAMPUS_CENTER } from '../campusConfig';
 
-export default function MapCanvas() {
-  const [showAllMarkers, setShowAllMarkers] = useState(false);
-  
-  // Empty state ready for real API data. No fake colors or triggers.
-  const [zoneStates, setZoneStates] = useState<Record<string, any>>({});
+interface MapCanvasProps {
+  onSelectZone: (id: string | null) => void;
+}
+
+export default function MapCanvas({ onSelectZone }: MapCanvasProps) {
+  const [isMounted, setIsMounted] = useState(false);
+  const [stealthMode, setStealthMode] = useState(true);
+  const [triggeredZones, setTriggeredZones] = useState<string[]>(['Pipe Junction W-3', 'Classroom B4']);
 
   useEffect(() => {
-    // Ensures text labels remain clean with no ugly Leaflet backgrounds
-    const style = document.createElement('style');
-    style.innerHTML = `
-      div.leaflet-tooltip {
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        color: black !important;
-        font-weight: 900 !important;
-        font-size: 11px !important;
-        text-shadow: 2px 2px 4px white, -2px -2px 4px white, 2px -2px 4px white, -2px 2px 4px white !important;
-      }
-      div.leaflet-tooltip::before,
-      div.leaflet-tooltip::after {
-        display: none !important;
-      }
-    `;
-    document.head.appendChild(style);
-
-    // API Polling structure (waiting for your future FastAPI backend)
-    const fetchState = async () => {
-      try {
-        const res = await fetch('http://localhost:8000/api/state');
-        if (!res.ok) throw new Error('Backend offline');
-        const data = await res.json();
-        setZoneStates(data);
-      } catch (err) {}
-    };
-    
-    const interval = setInterval(fetchState, 2000);
-    return () => {
-      document.head.removeChild(style);
-      clearInterval(interval);
-    };
+    setIsMounted(true);
   }, []);
 
-  const handleZoneClick = (zoneId: string) => {
-    console.log('Clicked zone:', zoneId);
-    // Future integration: Open sidebar or show camera feed here
-  };
+  if (!isMounted) return null;
+
+  const stealthCategories = ['garden', 'lecture_hall', 'classroom', 'pipe_sensor'];
 
   return (
-    <div className="relative h-screen w-full bg-black">
-      
-      <div className="absolute top-4 right-4 z-[1000]">
+    <div className="w-full h-screen relative">
+      {/* Global CSS for killing focus boxes and applying sleek typography */}
+      <style jsx global>{`
+        .leaflet-interactive:focus {
+          outline: none !important;
+        }
+        path.leaflet-interactive {
+          outline: none !important;
+        }
+        /* Custom modern typography for map place labels */
+        .custom-map-label {
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+          font-size: 11px !important;
+          font-weight: 700 !important;
+          letter-spacing: -0.01em !important;
+          color: #0f172a !important;
+          text-shadow: 0 1px 3px rgba(255, 255, 255, 0.9), 0 0 8px rgba(255, 255, 255, 0.8) !important;
+        }
+        .leaflet-tooltip-top:before,
+        .leaflet-tooltip-bottom:before,
+        .leaflet-tooltip-left:before,
+        .leaflet-tooltip-right:before {
+          display: none !important;
+        }
+      `}</style>
+
+      {/* Floating Stealth Mode Toggle Button */}
+      <div className="absolute top-4 right-4 z-[1000] flex items-center gap-3 bg-slate-950/90 backdrop-blur-xl border border-white/10 px-4 py-2.5 rounded-2xl shadow-2xl">
+        <span className="text-xs font-mono uppercase tracking-widest text-slate-400">Stealth Mode</span>
         <button
-          onClick={() => setShowAllMarkers(!showAllMarkers)}
-          className="bg-gray-900 border border-gray-600 text-white px-5 py-2 rounded shadow-xl hover:bg-gray-800 transition font-bold text-sm tracking-wide cursor-pointer"
+          onClick={() => setStealthMode(!stealthMode)}
+          className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all ${
+            stealthMode 
+              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.3)]' 
+              : 'bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-[0_0_15px_rgba(244,63,94,0.3)]'
+          }`}
         >
-          {showAllMarkers ? 'Hide Overview (Stealth Mode)' : 'Show Map Overview'}
+          {stealthMode ? 'ACTIVE (ON)' : 'DISABLED (OFF)'}
         </button>
       </div>
 
-      <MapContainer center={CAMPUS_CENTER} zoom={17} className="h-full w-full z-0">
+      <MapContainer
+        center={CAMPUS_CENTER}
+        zoom={17}
+        scrollWheelZoom={true}
+        className="w-full h-full z-0"
+        zoomControl={false}
+      >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
         {campusZones.map((zone) => {
-          // Reads future API data, defaults to 'normal'
-          const currentStatus = zoneStates[zone.id]?.status || 'normal';
-          const alwaysStealthCategories = ['classroom', 'garden', 'lecture_hall'];
-          
-          // Stealth & Overview Hiding Logic
-          if (currentStatus === 'normal') {
-            if (!showAllMarkers) return null; 
-            if (showAllMarkers && alwaysStealthCategories.includes(zone.category)) return null; 
-          }
+          const isStealthCategory = stealthCategories.includes(zone.category);
+          const isTriggered = triggeredZones.includes(zone.name);
+          const shouldHide = stealthMode && isStealthCategory && !isTriggered;
 
           return (
             <Polygon
               key={zone.id}
-              positions={zone.coordinates}
+              positions={zone.coordinates as any}
               pathOptions={{
-                stroke: false, // Prevents Leaflet from drawing border lines
-                fill: false,   // Prevents Leaflet from drawing ugly gray shapes
+                color: shouldHide ? 'transparent' : (isTriggered ? '#ef4444' : 'transparent'),
+                fillColor: shouldHide ? 'transparent' : (isTriggered ? '#f87171' : 'transparent'),
+                fillOpacity: shouldHide ? 0 : (isTriggered ? 0.4 : 0),
+                weight: 0,
               }}
               eventHandlers={{
-                click: () => handleZoneClick(zone.id),
+                click: () => {
+                  onSelectZone(zone.name);
+                },
               }}
             >
-              <Tooltip permanent direction="center">
-                {/* 
-                  Foundation for future Blinkers! 
-                  The class dynamic class "status-[type]" makes it easy to hook in animations later 
-                */}
-                <div className={`zone-label status-${currentStatus}`}>
+              {!shouldHide && (
+                <Tooltip 
+                  permanent 
+                  direction="center" 
+                  className="custom-map-label select-none pointer-events-none"
+                >
                   {zone.name}
+                </Tooltip>
+              )}
+
+              <Popup>
+                <div className="text-slate-900 font-sans p-1">
+                  <h3 className="font-bold text-base">{zone.name}</h3>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider font-mono">Category: {zone.category}</p>
                 </div>
-              </Tooltip>
+              </Popup>
             </Polygon>
           );
         })}
