@@ -270,7 +270,7 @@ def generate_strategy_with_llm(zone_id: str) -> StrategyResponse:
                 api_key=groq_key,
                 timeout=8.0
             )
-            model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+            model = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
         elif openai_key:
             from openai import OpenAI
             client = OpenAI(
