@@ -1,7 +1,17 @@
 export interface CampusZone {
   id: string;
   name: string;
-  category: 'building' | 'cafeteria' | 'parking' | 'lecture_hall' | 'classroom' | 'hostel' | 'sports' | 'garden';
+  category:
+    | 'building'
+    | 'cafeteria'
+    | 'parking'
+    | 'lecture_hall'
+    | 'classroom'
+    | 'hostel'
+    | 'sports'
+    | 'garden'
+    | 'utility'
+    | 'pipe_sensor';
   coordinates: [number, number][];
 }
 
@@ -13,12 +23,42 @@ const makeBox = (lat: number, lng: number, size = 0.00015): [number, number][] =
   [lat - size, lng - size],
 ];
 
-export const CAMPUS_CENTER: [number, number] = [12.66113, 77.44950]; // CDSIMER Center
+export const CAMPUS_CENTER: [number, number] = [12.66113, 77.4495]; // CDSIMER Center
+
+const generateWaterPipeNodes = (
+  centerLat: number,
+  centerLng: number,
+  count: number
+): CampusZone[] => {
+  const nodes: CampusZone[] = [];
+  for (let i = 1; i <= count; i++) {
+    const latOffset = (Math.random() - 0.5) * 0.008;
+    const lngOffset = (Math.random() - 0.5) * 0.008;
+    const lat = centerLat + latOffset;
+    const lng = centerLng + lngOffset;
+    const boxSize = 0.00005;
+
+    nodes.push({
+      id: `Pipe Junction W-${i}`,
+      name: `Water Node ${i}`,
+      category: 'pipe_sensor',
+      coordinates: [
+        [lat, lng],
+        [lat + boxSize, lng],
+        [lat + boxSize, lng + boxSize],
+        [lat, lng + boxSize],
+      ],
+    });
+  }
+  return nodes;
+};
+
+const waterPipeZones = generateWaterPipeNodes(CAMPUS_CENTER[0], CAMPUS_CENTER[1], 20);
 
 // --- RAW DATA ARRAYS ---
 const rawLectureHalls = [
-  [12.66211, 77.45022], [12.66220, 77.45034], [12.66232, 77.45049], 
-  [12.66206, 77.45024], [12.66216, 77.45038], [12.66227, 77.45055]
+  [12.66211, 77.45022], [12.66220, 77.45034], [12.66232, 77.45049],
+  [12.66206, 77.45024], [12.66216, 77.45038], [12.66227, 77.45055],
 ];
 
 const rawClassrooms = [
@@ -29,7 +69,7 @@ const rawClassrooms = [
   [12.66159, 77.45055], [12.66166, 77.45056], [12.66195, 77.45057], [12.66191, 77.45072],
   [12.66142, 77.44935], [12.66144, 77.44943], [12.66122, 77.44950], [12.66102, 77.44955],
   [12.66101, 77.44978], [12.66107, 77.44973], [12.66097, 77.44997], [12.66103, 77.45005],
-  [12.66096, 77.45016]
+  [12.66096, 77.45016],
 ];
 
 const rawGardens = [
@@ -38,13 +78,13 @@ const rawGardens = [
   [12.66120, 77.44897], [12.66117, 77.44907], [12.66088, 77.44885], [12.66085, 77.44892],
   [12.66065, 77.44895], [12.66037, 77.44900], [12.66019, 77.44913], [12.66069, 77.44872],
   [12.66173, 77.45029], [12.66162, 77.45030], [12.66127, 77.44994], [12.65915, 77.44841],
-  [12.65929, 77.44862], [12.66080, 77.44839], [12.66063, 77.44857]
+  [12.65929, 77.44862], [12.66080, 77.44839], [12.66063, 77.44857],
 ];
 
 // --- MASTER ZONE EXPORT ---
 export const campusZones: CampusZone[] = [
   // Main Buildings
-  { id: 'cdsimer', name: 'CDSIMER Center', category: 'building', coordinates: makeBox(12.66113, 77.44950, 0.0002) },
+  { id: 'cdsimer', name: 'CDSIMER Center', category: 'building', coordinates: makeBox(12.66113, 77.4495, 0.0002) },
   { id: 'soe', name: 'SOE Center', category: 'building', coordinates: makeBox(12.66186, 77.45063, 0.0002) },
   { id: 'a_block', name: 'A Block', category: 'building', coordinates: makeBox(12.66160, 77.45140, 0.0002) },
   { id: 'hospital', name: 'Hospital', category: 'building', coordinates: makeBox(12.66039, 77.44967, 0.0003) },
@@ -65,27 +105,39 @@ export const campusZones: CampusZone[] = [
   { id: 'parking_4', name: 'Parking 4', category: 'parking', coordinates: makeBox(12.66179, 77.45221) },
   { id: 'parking_5', name: 'Parking 5', category: 'parking', coordinates: makeBox(12.65766, 77.44655) },
 
-  // Hostels & Laundry (Water Leak Monitoring)
+  // Hostels & Utility
   { id: 'hostel_1', name: 'Hostel 1', category: 'hostel', coordinates: makeBox(12.65753, 77.44749, 0.0002) },
   { id: 'hostel_2', name: 'Hostel 2', category: 'hostel', coordinates: makeBox(12.65805, 77.44711, 0.0002) },
   { id: 'hostel_3', name: 'Hostel 3', category: 'hostel', coordinates: makeBox(12.65776, 77.44730, 0.0002) },
   { id: 'hostel_4', name: 'Hostel 4', category: 'hostel', coordinates: makeBox(12.65875, 77.44868, 0.0002) },
   { id: 'laundry', name: 'Laundry Facility', category: 'hostel', coordinates: makeBox(12.65849, 77.44767) },
+  { id: 'water_utility', name: 'Water Utility', category: 'utility', coordinates: makeBox(12.66020, 77.45090, 0.00025) },
 
-  // Stadiums (Irrigation/Maintenance)
-  { id: 'stadium_cricket', name: 'Cricket Stadium', category: 'sports', coordinates: makeBox(12.66160, 77.45482, 0.0005) }, // Larger box
-  { id: 'stadium_football', name: 'Football Stadium', category: 'sports', coordinates: makeBox(12.66149, 77.45588, 0.0005) }, // Larger box
+  // Stadiums
+  { id: 'stadium_cricket', name: 'Cricket Stadium', category: 'sports', coordinates: makeBox(12.66160, 77.45482, 0.0005) },
+  { id: 'stadium_football', name: 'Football Stadium', category: 'sports', coordinates: makeBox(12.66149, 77.45588, 0.0005) },
 
-  // Map over the raw arrays to dynamically generate the repeating zones
+  // Dynamic zones
   ...rawLectureHalls.map((coords, i) => ({
-    id: `lecture_hall_${i + 1}`, name: `Lecture Hall ${i + 1}`, category: 'lecture_hall' as const, coordinates: makeBox(coords[0], coords[1], 0.00008)
+    id: `lecture_hall_${i + 1}`,
+    name: `Lecture Hall ${i + 1}`,
+    category: 'lecture_hall' as const,
+    coordinates: makeBox(coords[0], coords[1], 0.00008),
   })),
 
   ...rawClassrooms.map((coords, i) => ({
-    id: `classroom_${i + 1}`, name: `Classroom ${i + 1}`, category: 'classroom' as const, coordinates: makeBox(coords[0], coords[1], 0.00005)
+    id: `classroom_${i + 1}`,
+    name: `Classroom ${i + 1}`,
+    category: 'classroom' as const,
+    coordinates: makeBox(coords[0], coords[1], 0.00005),
   })),
 
   ...rawGardens.map((coords, i) => ({
-    id: `garden_${i + 1}`, name: `Garden Zone ${i + 1}`, category: 'garden' as const, coordinates: makeBox(coords[0], coords[1], 0.00006)
-  }))
+    id: `garden_${i + 1}`,
+    name: `Garden Zone ${i + 1}`,
+    category: 'garden' as const,
+    coordinates: makeBox(coords[0], coords[1], 0.00006),
+  })),
+
+  ...waterPipeZones,
 ];
