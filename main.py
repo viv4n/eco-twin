@@ -180,75 +180,6 @@ FALLBACK_STRATEGIES: Dict[str, Dict[str, Any]] = {
             }
         ]
     },
-    "cafeteria_zone_c": {
-        "diagnostic": "Cafeteria Zone C is experiencing overcrowding (34 occupants), elevated CO2 levels (890 ppm), and thermal spike (25.4°C) with elevated load (4.8 kW).",
-        "choices": [
-            {
-                "id": "1",
-                "title": "Fresh Air Purge & HVAC Boost (-45% CO2)",
-                "description": "Increase outside air damper intake to 80% and lower setpoint to 21.5°C.",
-                "chart_data": [55, 48, 42, 38, 35]
-            },
-            {
-                "id": "2",
-                "title": "Dynamic Occupancy Rebalance (-25% Density)",
-                "description": "Direct diners to East Terrace & secondary stations via digital signage.",
-                "chart_data": [48, 44, 40, 36, 34]
-            },
-            {
-                "id": "3",
-                "title": "Baseline Variable Air Volume Regulation",
-                "description": "Maintain standard variable air volume compensation schedule.",
-                "chart_data": [48, 50, 49, 47, 45]
-            }
-        ]
-    },
-    "library_zone_b": {
-        "diagnostic": "Library Zone B indoor climate: 15 occupants, 520 ppm CO2, 21.5°C, 2.8 kW consumption with HVAC in eco-mode.",
-        "choices": [
-            {
-                "id": "1",
-                "title": "Optimized Daylight Harvesting (-30% Lighting kW)",
-                "description": "Dim perimeter luminaires to 40% utilizing natural light through south glazing.",
-                "chart_data": [28, 22, 20, 19, 18]
-            },
-            {
-                "id": "2",
-                "title": "Demand-Controlled Ventilation Trim (-15% kW)",
-                "description": "Trim fan speed while keeping CO2 comfortably below 600 ppm threshold.",
-                "chart_data": [28, 25, 24, 23, 22]
-            },
-            {
-                "id": "3",
-                "title": "Baseline Eco-Mode Maintenance (0% Delta)",
-                "description": "Retain automated occupancy sensing and steady-state setpoints.",
-                "chart_data": [28, 28, 28, 27, 26]
-            }
-        ]
-    },
-    "main_auditorium": {
-        "diagnostic": "Main Auditorium is unoccupied in standby mode (0 occupants, 0.8 kW standby power).",
-        "choices": [
-            {
-                "id": "1",
-                "title": "Deep Sleep Standby Mode (-75% Standby Load)",
-                "description": "Isolate stage lighting circuits and put ventilation into full hibernation (0.2 kW).",
-                "chart_data": [8, 2, 2, 2, 2]
-            },
-            {
-                "id": "2",
-                "title": "Pre-Event Conditioning Schedule",
-                "description": "Maintain low-power standby until 45 minutes prior to next calendar booking.",
-                "chart_data": [8, 8, 8, 15, 25]
-            },
-            {
-                "id": "3",
-                "title": "Baseline Idle Maintenance",
-                "description": "Keep standard standby circulation and emergency egress illumination active.",
-                "chart_data": [8, 8, 8, 8, 8]
-            }
-        ]
-    }
 }
 
 def get_hardcoded_fallback(zone_id: str) -> StrategyResponse:
@@ -400,14 +331,6 @@ def generate_strategy_with_llm(zone_id: str) -> StrategyResponse:
 def get_campus_state() -> Dict[str, Any]:
     """Single source of truth polled by React frontend."""
     return state.read_state()
-
-@app.post("/api/state")
-def post_update_state(payload: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    HTTP POST push endpoint allowing Module 1 / IoT sensors
-    to push live state updates into state.json.
-    """
-    return state.update_state(payload)
 
 @app.post("/api/trigger/{scenario_id}")
 def post_trigger_scenario(scenario_id: str) -> Dict[str, Any]:

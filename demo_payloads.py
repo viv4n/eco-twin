@@ -30,14 +30,6 @@ ENERGY_SPIKE = {
     "action_required": "gen_ai_decision"
 }
 
-CAFETERIA_OVERCROWDED = {
-    "zone": "Cafeteria Zone C",
-    "issue": "overcrowded",
-    "priority": "warning",
-    "metric": "890 ppm CO2, 25.4°C, 34 occupants",
-    "action_required": "gen_ai_decision"
-}
-
 DEMO_PAYLOADS = {
     "water_leak": (
         "science_block",
@@ -70,28 +62,6 @@ DEMO_PAYLOADS = {
             "occupancy": 0,
             "hvac": "active",
             "metric": "0 occupants, HVAC active (75 kW)"
-        }
-    ),
-    "cafeteria_overcrowded": (
-        "cafeteria_zone_c",
-        {
-            "status": "warning",
-            "occupancy": 34,
-            "co2_ppm": 890,
-            "temperature_c": 25.4,
-            "power_consumption_kw": 4.8,
-            "metric": "890 ppm CO2, 25.4°C"
-        }
-    ),
-    "overcrowded": (
-        "cafeteria_zone_c",
-        {
-            "status": "warning",
-            "occupancy": 34,
-            "co2_ppm": 890,
-            "temperature_c": 25.4,
-            "power_consumption_kw": 4.8,
-            "metric": "890 ppm CO2, 25.4°C"
         }
     ),
 }
