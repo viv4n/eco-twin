@@ -6,6 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { campusZones, CAMPUS_CENTER } from '../campusConfig';
 import { useTheme } from '../context/ThemeContext';
+import { API_BASE_URL } from '../utils/config';
 
 interface MapCanvasProps {
   onSelectZone: (id: string | null) => void;
@@ -193,7 +194,7 @@ export default function MapCanvas({ onSelectZone, triggeredZoneIds }: MapCanvasP
               </Tooltip>
 
               <Popup>
-                <div className="text-slate-900 font-sans p-1">
+                <div className="text-slate-900 font-sans p-1 min-w-[210px]">
                   <h3 className="font-bold text-sm">{zone.name}</h3>
                   <p className="text-[10px] text-slate-500 uppercase tracking-wider font-mono mt-0.5">
                     Category: {zone.category}
@@ -201,6 +202,25 @@ export default function MapCanvas({ onSelectZone, triggeredZoneIds }: MapCanvasP
                   <p className={`text-[10px] font-bold mt-1 font-mono ${isTriggered ? 'text-red-600' : 'text-emerald-600'}`}>
                     {isTriggered ? 'STATUS: ACTIVE TELEMETRY ALERT' : 'STATUS: NOMINAL'}
                   </p>
+                  {(zone.category === 'lecture_hall' || zone.category === 'parking' || isTriggered) && (
+                    <div className="mt-2 rounded-lg overflow-hidden border border-slate-700 bg-black">
+                      <div className="text-[9px] font-mono text-emerald-400 bg-slate-900 px-2 py-0.5 flex items-center justify-between">
+                        <span>LIVE CCTV • {zone.name}</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                      </div>
+                      <img
+                        src={`${API_BASE_URL}/api/v1/vision/feed/${encodeURIComponent(zone.id)}`}
+                        alt={`${zone.name} CCTV Feed`}
+                        className="w-full h-28 object-cover bg-slate-900"
+                      />
+                    </div>
+                  )}
+                  <button
+                    onClick={() => onSelectZone(zone.name)}
+                    className="mt-2 w-full py-1 px-2 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-mono font-bold transition-colors cursor-pointer"
+                  >
+                    Open Diagnostic Console →
+                  </button>
                 </div>
               </Popup>
             </Marker>

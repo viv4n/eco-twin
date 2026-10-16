@@ -4,8 +4,8 @@
  * context/CampusStoreContext.tsx — DSU Smart Campus Digital Twin
  *
  * Fully synchronized with Module 2 backend:
- * - mainx.py & main.py: Initial load via GET ${API_BASE_URL}/api/state
- * - realtime.py: Live WebSocket stream via ${WS_BASE_URL} (or /ws/state)
+ * - Initial load via GET ${API_BASE_URL}/api/v1/telemetry/state & GET ${API_BASE_URL}/api/state
+ * - Live WebSocket stream via ${WS_BASE_URL} (/ws/state) with 1-second continuous telemetry
  * - demo_payloads.py & state.py: 36-zone baseline and active telemetry synchronization
  */
 
@@ -24,22 +24,62 @@ import type { ZoneTelemetry } from '../types/api';
 
 // Cross-alias mapping between backend zone keys and frontend campusConfig zone IDs/names
 const ZONE_ALIAS_MAP: Record<string, string[]> = {
-  pipe_junction_bwssb_1: ['Pipe Junction W-3', 'Pipe Junction W-1', 'water_utility'],
+  // Water / Utilities
+  pipe_junction_bwssb_1: ['Pipe Junction W-3', 'Pipe Junction W-1', 'water_utility', 'Water Node 1', 'Water Node 3', 'Water Utility'],
+  cdsimer_hospital: ['Hospital', 'cdsimer', 'CDSIMER Center', 'hospital'],
+  main_server_room: ['Hospital', 'cdsimer', 'soe', 'SOE Center', 'main_server_room'],
+  water_utility: ['Water Utility', 'Pipe Junction W-1', 'Pipe Junction W-3'],
+
+  // Academic & Classrooms
+  soe_center_of_engineering: ['SOE Center', 'soe', 'soe_center_of_engineering'],
+  soe_classroom_b4: ['Classroom B4', 'classroom_4', 'classroom_2', 'Classroom 4', 'soe_classroom_b4'],
+  soe_classroom_a1: ['Classroom A1', 'classroom_1', 'Classroom 1', 'soe_classroom_a1'],
+  pharmacy_classroom_1: ['Pharmacy Classroom 1', 'classroom_3', 'Classroom 3', 'pharmacy', 'pharmacy_classroom_1'],
+  a_block: ['A Block', 'a_block'],
+  nursing_block: ['Nursing Block', 'nursing', 'nursing_block'],
+  health_sciences: ['Health Sciences', 'health_sciences'],
+  pharmacy_department: ['Pharmacy', 'pharmacy', 'pharmacy_department'],
+
+  // Lecture Halls
+  soe_lecture_hall_1: ['Lecture Hall 1', 'lecture_hall_1', 'soe_lecture_hall_1'],
+  soe_lecture_hall_2: ['Lecture Hall 2', 'lecture_hall_2', 'soe_lecture_hall_2'],
+  soe_lecture_hall_3: ['Lecture Hall 3', 'lecture_hall_3', 'soe_lecture_hall_3'],
+  soe_lecture_hall_4: ['Lecture Hall 4', 'lecture_hall_4', 'soe_lecture_hall_4'],
+  soe_lecture_hall_5: ['Lecture Hall 5', 'lecture_hall_5', 'soe_lecture_hall_5'],
+  soe_lecture_hall_6: ['Lecture Hall 6', 'lecture_hall_6', 'soe_lecture_hall_6'],
+
+  // Parking
+  parking_1: ['Parking 1', 'parking_1', 'main_lot'],
+  parking_2: ['Parking 2', 'parking_2'],
+  parking_3: ['Parking 3', 'parking_3'],
+  parking_4: ['Parking 4', 'parking_4'],
+  parking_5: ['Parking 5', 'parking_5'],
+
+  // Hostels & Facilities
+  hostel_1: ['Hostel 1', 'hostel_1'],
+  hostel_2: ['Hostel 2', 'hostel_2'],
+  hostel_3: ['Hostel 3', 'hostel_3'],
+  girls_hostel_4: ['Girls Hostel 4', 'Hostel 4', 'hostel_4', 'girls_hostel_4'],
+  laundry_facility: ['Laundry Facility', 'laundry', 'laundry_facility'],
+  hostel_mess: ['Hostel Mess', 'hostel_mess'],
+
+  // Cafeterias & Dining
+  cafe_1_tummy_trails: ['Tummy Trails (Cafe 1)', 'cafe_tummy_trails', 'cafe_1_tummy_trails'],
+  cafe_2_bits_and_bites: ['Bits and Bites (Cafe 2)', 'cafe_bits_bites', 'cafe_2_bits_and_bites'],
+  cafe_4_food_truck: ['Food Truck (Cafe 4)', 'cafe_food_truck', 'cafe_4_food_truck'],
+
+  // Sports & Recreation
+  football_stadium: ['Football Stadium', 'stadium_football', 'Varsity Football Stadium'],
+  cricket_stadium: ['Cricket Stadium', 'stadium_cricket'],
+  amphitheatre: ['Amphitheatre', 'amphitheatre'],
+  dsu_arena: ['DSU Arena', 'dsu_arena'],
+  open_auditorium: ['Open Auditorium', 'open_auditorium'],
+
+  // Legacy schema compatibility
   science_block: ['Pipe Junction W-3', 'a_block', 'health_sciences'],
-  cdsimer_hospital: ['Hospital', 'cdsimer'],
-  main_server_room: ['Hospital', 'cdsimer', 'soe'],
-  soe_center_of_engineering: ['SOE Center', 'soe'],
-  soe_classroom_b4: ['Classroom B4', 'classroom_4', 'classroom_2'],
-  soe_lecture_hall_1: ['Lecture Hall 1', 'lecture_hall_1'],
-  soe_lecture_hall_4: ['Lecture Hall 4', 'lecture_hall_4'],
   lecture_hall_a: ['Lecture Hall 1', 'lecture_hall_1', 'soe_lecture_hall_1'],
   main_lot: ['parking_1', 'Parking 1'],
-  parking_1: ['Parking 1', 'main_lot'],
-  parking_3: ['Parking 3'],
-  parking_5: ['Parking 5'],
   cafeteria: ['cafe_bits_bites', 'cafe_tummy_trails', 'cafe_food_truck', 'Bits and Bites (Cafe 2)'],
-  football_stadium: ['Football Stadium', 'stadium_football'],
-  cricket_stadium: ['Cricket Stadium', 'stadium_cricket'],
 };
 
 // Safe baseline state built from campusConfig zones
@@ -80,7 +120,7 @@ interface CampusStoreContextValue {
   lastUpdated: string | null;
   /** Function to manually refresh state from REST */
   refreshState: () => Promise<void>;
-  /** Function to send an action over WebSocket (as supported by realtime.py) */
+  /** Function to send an action over WebSocket (as supported by main.py) */
   sendWsAction: (action: string, payload?: Record<string, any>) => boolean;
 }
 
@@ -106,70 +146,53 @@ export function CampusStoreProvider({ children }: { children: React.ReactNode })
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isUnmountedRef = useRef<boolean>(false);
 
-  // 1. Initial REST Load: GET ${API_BASE_URL}/api/state
+  // 1. Initial REST Load: GET ${API_BASE_URL}/api/v1/telemetry/state with fallback to /api/state
   const fetchInitialState = useCallback(async () => {
-    const targetUrl = `${API_BASE_URL}/api/state`;
-    console.log("Fetching state from:", targetUrl);
-    try {
-      const res = await fetch(targetUrl, {
-        cache: 'no-store',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-      });
+    const urlsToTry = [
+      `${API_BASE_URL}/api/v1/telemetry/state`,
+      `${API_BASE_URL}/api/state`,
+    ];
 
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error("Fetch Error:", res.status, errorText);
+    let stateLoaded = false;
+    for (const url of urlsToTry) {
+      try {
+        const res = await fetch(url, {
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+        });
 
-        // Fallback check for /api/v1/telemetry/state
-        if (res.status === 404) {
-          const fallbackUrl = `${API_BASE_URL}/api/v1/telemetry/state`;
-          console.log("Attempting fallback fetch from:", fallbackUrl);
-          const fallbackRes = await fetch(fallbackUrl, {
-            cache: 'no-store',
-            headers: {
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
-            },
-          });
-          if (fallbackRes.ok) {
-            const fallbackData = await fallbackRes.json();
-            const statePayload = fallbackData.zones || fallbackData.state || fallbackData;
+        if (res.ok) {
+          const data = await res.json();
+          const statePayload = data.zones || data.state || data;
+          if (statePayload && typeof statePayload === 'object' && Object.keys(statePayload).length > 0) {
             setTelemetry(statePayload);
             setLastUpdated(new Date().toISOString());
             setLastError(null);
-            setIsLoading(false);
-            return;
+            stateLoaded = true;
+            break;
           }
         }
-        throw new Error(`HTTP ${res.status}: ${errorText || 'Failed to fetch state'}`);
+      } catch (err: any) {
+        // Try fallback route
       }
-
-      const data = await res.json();
-      const statePayload = data.zones || data.state || data;
-      if (statePayload && typeof statePayload === 'object') {
-        setTelemetry(statePayload);
-      }
-      setLastUpdated(new Date().toISOString());
-      setLastError(null);
-    } catch (err: any) {
-      console.error("State Fetch Failure:", err);
-      setLastError(err?.message || 'Failed to fetch initial state');
-    } finally {
-      setIsLoading(false);
     }
+
+    if (!stateLoaded) {
+      setLastError('Unable to connect to backend telemetry service.');
+    }
+    setIsLoading(false);
   }, []);
 
-  // 2. WebSocket Live Stream: Connect to ${WS_BASE_URL} (realtime.py /ws/state)
+  // 2. WebSocket Live Stream: Connect to ${WS_BASE_URL} (/ws/state)
   const connectWebSocket = useCallback(() => {
     if (isUnmountedRef.current) return;
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
-    // Determine target WebSocket URL: if WS_BASE_URL ends with '/ws', append '/state' to match realtime.py
     const targetWsUrl = WS_BASE_URL.endsWith('/ws')
       ? `${WS_BASE_URL}/state`
       : WS_BASE_URL;
@@ -194,20 +217,16 @@ export function CampusStoreProvider({ children }: { children: React.ReactNode })
 
           if (!data || typeof data !== 'object') return;
 
-          // Handle realtime.py message shapes
           if (data.type === 'state' && data.data) {
-            // {"type": "state", "data": {...}}
             setTelemetry(data.data);
           } else if (data.zones && typeof data.zones === 'object') {
             setTelemetry(data.zones);
           } else if (data.type === 'ack' && data.data) {
-            // Acknowledgment with updated state
             const stateData = data.data.zones || data.data.state || data.data;
             if (stateData && typeof stateData === 'object') {
               setTelemetry(stateData);
             }
           } else if (data.zone_id && (data.status || data.aspect)) {
-            // Single zone partial update
             setTelemetry((prev) => ({
               ...prev,
               [data.zone_id]: {
@@ -216,7 +235,6 @@ export function CampusStoreProvider({ children }: { children: React.ReactNode })
               },
             }));
           } else if (!data.type && !data.action) {
-            // Direct state dictionary (e.g., when ENVELOPE = False)
             setTelemetry(data);
           }
         } catch (e) {
@@ -234,7 +252,7 @@ export function CampusStoreProvider({ children }: { children: React.ReactNode })
         if (!isUnmountedRef.current) {
           reconnectTimeoutRef.current = setTimeout(() => {
             connectWebSocket();
-          }, 3000);
+          }, 2000);
         }
       };
     } catch {
@@ -242,7 +260,7 @@ export function CampusStoreProvider({ children }: { children: React.ReactNode })
       if (!isUnmountedRef.current) {
         reconnectTimeoutRef.current = setTimeout(() => {
           connectWebSocket();
-        }, 3000);
+        }, 2000);
       }
     }
   }, []);
@@ -285,7 +303,16 @@ export function CampusStoreProvider({ children }: { children: React.ReactNode })
     Object.entries(telemetry).forEach(([key, val]: [string, any]) => {
       if (!val || typeof val !== 'object') return;
       const status = (val.status || '').toLowerCase();
-      const isTriggered = status === 'warning' || status === 'critical' || status === 'critical_waste' || status === 'low';
+      const isTriggered =
+        status === 'warning' ||
+        status === 'critical' ||
+        status === 'critical_waste' ||
+        status === 'low' ||
+        val.leak_detected === true ||
+        val.system_state === 'cooling_failure' ||
+        val.system_state === 'life_safety_risk' ||
+        val.hvac_status === 'overconsuming' ||
+        val.hvac_status === 'failed';
 
       if (isTriggered) {
         // Add direct key and names
