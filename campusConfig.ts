@@ -25,6 +25,14 @@ const makeBox = (lat: number, lng: number, size = 0.00015): [number, number][] =
 
 export const CAMPUS_CENTER: [number, number] = [12.66113, 77.4495]; // CDSIMER Center
 
+// Calculate the center point of polygon coordinates for point pin placement and map flyTo
+export const getZoneCenter = (coords: [number, number][]): [number, number] => {
+  if (!coords || coords.length === 0) return CAMPUS_CENTER;
+  const latSum = coords.reduce((acc, c) => acc + c[0], 0);
+  const lngSum = coords.reduce((acc, c) => acc + c[1], 0);
+  return [latSum / coords.length, lngSum / coords.length];
+};
+
 const generateWaterPipeNodes = (
   centerLat: number,
   centerLng: number,
