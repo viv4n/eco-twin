@@ -4,7 +4,7 @@
   },
   "lecture_hall_a": {
     "status": "normal",
-    "occupancy": 30,
+    "occupancy": 2,
     "hvac": "active"
   },
   "science_block": {
