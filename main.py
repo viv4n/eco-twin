@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 import demo_payloads
+import state as state_module
 
 logging.basicConfig(
     level=logging.INFO,
@@ -62,33 +63,13 @@ app.add_middleware(
 # State Management Utilities
 # -------------------------------------------------------------------
 def load_current_state() -> dict:
-    """Reads directly from state.json on every request to prevent caching issues."""
-    if not os.path.exists(STATE_FILE):
-        return copy.deepcopy(demo_payloads.BASELINE_STATE)
-    try:
-        with open(STATE_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            if isinstance(data, dict) and len(data) > 0:
-                return data
-    except Exception as e:
-        logger.warning(f"Error reading {STATE_FILE}: {e}")
-    return copy.deepcopy(demo_payloads.BASELINE_STATE)
+    """Reads directly via state_module to maintain consistent state."""
+    return state_module.read_state()
 
 
 def save_state_atomically(state_dict: dict) -> None:
-    """Atomically writes 36-zone state dictionary to state.json via temporary file."""
-    try:
-        with open(TEMP_STATE_FILE, "w", encoding="utf-8") as f:
-            json.dump(state_dict, f, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        try:
-            os.replace(TEMP_STATE_FILE, STATE_FILE)
-        except (PermissionError, OSError):
-            with open(STATE_FILE, "w", encoding="utf-8") as f:
-                json.dump(state_dict, f, indent=2)
-    except Exception as e:
-        logger.error(f"Error writing state atomically: {e}")
+    """Atomically writes 36-zone state dictionary via state_module."""
+    state_module.write_state(state_dict)
 
 
 def apply_scenario_trigger(scenario_name: str) -> dict:
@@ -97,8 +78,7 @@ def apply_scenario_trigger(scenario_name: str) -> dict:
     target_mode = "LIVE" if norm.lower() in ["off", "live", "reset", "nominal"] else norm
 
     # Fetch complete mutated state from generator
-    updated_state = demo_payloads.get_scenario(target_mode, time.time())
-    save_state_atomically(updated_state)
+    updated_state = state_module.trigger_demo(target_mode)
 
     # Sync mode files for vision.py
     for file_path in [DEMO_MODE_FILE, SCENARIO_TRIGGER_FILE]:

@@ -8,14 +8,16 @@ import { useCampusStore } from '../context/CampusStoreContext';
 
 interface MapCanvasProps {
   onSelectZone: (id: string | null) => void;
+  triggeredZoneIds?: string[];
 }
 
-export default function MapCanvas({ onSelectZone }: MapCanvasProps) {
+export default function MapCanvas({ onSelectZone, triggeredZoneIds: propTriggeredZoneIds }: MapCanvasProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [stealthMode, setStealthMode] = useState(true);
 
   // Live telemetry from WebSocket/REST via CampusStoreContext
-  const { triggeredZoneIds, isConnected } = useCampusStore();
+  const { triggeredZoneIds: storeTriggeredZoneIds, isConnected } = useCampusStore();
+  const triggeredZoneIds = propTriggeredZoneIds || storeTriggeredZoneIds;
 
   useEffect(() => {
     setIsMounted(true);
