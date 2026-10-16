@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Polygon, Tooltip, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { campusZones, CAMPUS_CENTER } from '../campusConfig';
+import { campusZones, CAMPUS_CENTER, CampusZone } from './campusConfig';
 
 interface MapCanvasProps {
   onSelectZone: (id: string | null) => void;
@@ -79,7 +79,7 @@ export default function MapCanvas({ onSelectZone }: MapCanvasProps) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {campusZones.map((zone) => {
+        {campusZones.map((zone: CampusZone) => {
           const isStealthCategory = stealthCategories.includes(zone.category);
           const isTriggered = triggeredZones.includes(zone.name);
           const shouldHide = stealthMode && isStealthCategory && !isTriggered;

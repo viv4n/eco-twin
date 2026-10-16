@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import { useTheme } from '../context/ThemeContext';
 import { useCampusStore } from '../context/CampusStoreContext';
+import { API_BASE_URL } from '../utils/config';
 
 interface Choice {
   id: string;
@@ -331,6 +332,21 @@ export default function Drawer({ isOpen, onClose, zoneId }: DrawerProps) {
                   )}
                   <span className="text-emerald-400/80">• {visionConfidence}% Conf</span>
                 </div>
+              </div>
+            )}
+
+            {/* Live OpenCV / YOLOv8 MJPEG Video Stream */}
+            {hasVision && (
+              <div className="mb-4 rounded-xl overflow-hidden border border-emerald-500/30 bg-slate-950/90 shadow-xl relative shrink-0">
+                <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-2 px-2.5 py-1 rounded-lg bg-black/80 backdrop-blur-md text-[10px] font-mono text-emerald-400 border border-emerald-500/30">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <span className="font-bold tracking-wider">LIVE CCTV • CAM-01 (YOLOv8s)</span>
+                </div>
+                <img
+                  src={`${API_BASE_URL}/api/v1/vision/feed/${encodeURIComponent(zoneId || 'soe_lecture_hall_1')}`}
+                  alt="Live CCTV Camera Feed"
+                  className="w-full h-44 object-cover bg-slate-900"
+                />
               </div>
             )}
 

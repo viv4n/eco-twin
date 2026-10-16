@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Activity, Zap, ChevronRight, AlertTriangle, Smartphone } from 'lucide-react';
 import PredictionGraph from './PredictionGraph';
+import { API_BASE_URL } from './utils/config';
 
 interface DrawerProps {
   isOpen: boolean;
@@ -102,6 +103,21 @@ export default function Drawer({ isOpen, onClose, zoneId }: DrawerProps) {
                 <X size={18} />
               </button>
             </div>
+
+            {/* Live Camera Video Feed from FastAPI MJPEG Endpoint */}
+            {(zoneId?.toLowerCase().includes('lecture_hall') || zoneId?.toLowerCase().includes('parking') || data.type === 'emergency') && (
+              <div className="rounded-2xl overflow-hidden border border-emerald-500/30 bg-slate-950/80 shadow-2xl relative">
+                <div className="absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1 rounded-lg bg-black/80 backdrop-blur-md text-xs font-mono text-emerald-400 border border-emerald-500/30">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <span className="font-bold">LIVE OPTICAL CV FEED • {data.name}</span>
+                </div>
+                <img
+                  src={`${API_BASE_URL}/api/v1/vision/feed/${encodeURIComponent(zoneId || 'cam_01')}`}
+                  alt="Live CCTV Camera Feed"
+                  className="w-full h-52 object-cover bg-slate-900"
+                />
+              </div>
+            )}
 
             {/* Diagnostic Box */}
             <div className="bg-slate-950/80 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl">

@@ -5,5 +5,15 @@ env/
 !.env.example
 __pycache__/
 *.pyc
+state.json
 state.json.tmp
+latest_frame.jpg
+latest_frame.jpg.tmp
+active_scenario.txt
+demo_mode.txt
 .pytest_cache/
+.next/
+node_modules/
+eco-twin-frontend/
+eco-twin-router/
+eco-twin-recharts/
