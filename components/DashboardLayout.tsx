@@ -4,9 +4,10 @@ import React, { useState } from 'react';
 import { 
   LayoutDashboard, Zap, Leaf, 
   Users, Layers, Bell, FileText, Settings, Activity, CheckCircle2,
-  Droplets, Car, AlertTriangle 
+  Droplets, Car, AlertTriangle, ShieldCheck
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useCampusStore } from '../context/CampusStoreContext';
 import SettingsModal from './SettingsModal';
 
 export type AspectType = 'energy' | 'water' | 'parking' | 'occupancy' | 'irrigation' | 'emergency';
@@ -23,8 +24,74 @@ export default function DashboardLayout({
   onSelectAspect,
 }: DashboardLayoutProps) {
   const { theme } = useTheme();
+  const { telemetry, triggeredZoneIds, isConnected } = useCampusStore();
   const [internalTab, setInternalTab] = useState('Overview');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [currentDateStr, setCurrentDateStr] = useState('Mon, 26 May');
+
+  React.useEffect(() => {
+    setCurrentDateStr(
+      new Date().toLocaleDateString('en-GB', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+      })
+    );
+  }, []);
+
+  // Compute live active anomaly items from telemetry state
+  const activeAlerts = React.useMemo(() => {
+    const alerts: Array<{
+      id: string;
+      name: string;
+      status: string;
+      aspect: AspectType;
+      label: string;
+      detail: string;
+    }> = [];
+
+    Object.entries(telemetry || {}).forEach(([key, val]: [string, any]) => {
+      if (!val || typeof val !== 'object') return;
+      const status = (val.status || '').toLowerCase();
+      if (['critical', 'warning', 'critical_waste', 'low'].includes(status) || val.leak_detected) {
+        let aspect: AspectType = 'energy';
+        let label = 'Power Anomaly';
+        let detail = `${val.power_consumption_kw || 45} kW`;
+
+        if (val.leak_detected || key.includes('pipe') || key.includes('water')) {
+          aspect = 'water';
+          label = 'Pipe Pressure Drop';
+          detail = `${val.water_pressure_psi || 14} PSI`;
+        } else if (key.includes('parking')) {
+          aspect = 'parking';
+          label = 'Parking Congestion';
+          detail = `${val.occupancy_pct || 96}% Full`;
+        } else if (val.temperature_c && val.temperature_c > 35) {
+          aspect = 'emergency';
+          label = 'Critical Temp';
+          detail = `${val.temperature_c}°C`;
+        } else if (val.co2_ppm && val.co2_ppm > 1000) {
+          aspect = 'occupancy';
+          label = 'High CO2 ppm';
+          detail = `${val.co2_ppm} ppm`;
+        }
+
+        alerts.push({
+          id: key,
+          name: val.name || key.replace(/_/g, ' ').toUpperCase(),
+          status,
+          aspect,
+          label,
+          detail,
+        });
+      }
+    });
+
+    return alerts;
+  }, [telemetry]);
+
+  // Dynamic Campus Health Score
+  const healthScore = Math.max(100 - (activeAlerts.length * 14), 38);
 
   const navItems: Array<{
     name: string;
@@ -34,14 +101,14 @@ export default function DashboardLayout({
     badgeColor?: string;
   }> = [
     { name: 'Overview', icon: LayoutDashboard },
-    { name: 'Energy & HVAC', icon: Zap, aspect: 'energy', badge: 2, badgeColor: 'bg-amber-500' },
-    { name: 'Water Utilities', icon: Droplets, aspect: 'water', badge: 3, badgeColor: 'bg-sky-500' },
-    { name: 'Parking Lots', icon: Car, aspect: 'parking', badge: 2, badgeColor: 'bg-blue-500' },
-    { name: 'Classrooms', icon: Users, aspect: 'occupancy', badge: 2, badgeColor: 'bg-violet-500' },
-    { name: 'Smart Irrigation', icon: Leaf, aspect: 'irrigation', badge: 1, badgeColor: 'bg-emerald-500' },
-    { name: 'Emergencies', icon: AlertTriangle, aspect: 'emergency', badge: 2, badgeColor: 'bg-rose-500' },
+    { name: 'Energy & HVAC', icon: Zap, aspect: 'energy', badge: activeAlerts.filter(a => a.aspect === 'energy').length || undefined, badgeColor: 'bg-amber-500' },
+    { name: 'Water Utilities', icon: Droplets, aspect: 'water', badge: activeAlerts.filter(a => a.aspect === 'water').length || undefined, badgeColor: 'bg-sky-500' },
+    { name: 'Parking Lots', icon: Car, aspect: 'parking', badge: activeAlerts.filter(a => a.aspect === 'parking').length || undefined, badgeColor: 'bg-blue-500' },
+    { name: 'Classrooms', icon: Users, aspect: 'occupancy', badge: activeAlerts.filter(a => a.aspect === 'occupancy').length || undefined, badgeColor: 'bg-violet-500' },
+    { name: 'Smart Irrigation', icon: Leaf, aspect: 'irrigation', badge: activeAlerts.filter(a => a.aspect === 'irrigation').length || undefined, badgeColor: 'bg-emerald-500' },
+    { name: 'Emergencies', icon: AlertTriangle, aspect: 'emergency', badge: activeAlerts.filter(a => a.aspect === 'emergency').length || undefined, badgeColor: 'bg-rose-500' },
     { name: 'All Facilities', icon: Layers },
-    { name: 'Alerts Hub', icon: Bell, badge: 7, badgeColor: 'bg-rose-500' },
+    { name: 'Alerts Hub', icon: Bell, badge: activeAlerts.length || undefined, badgeColor: 'bg-rose-500' },
     { name: 'Reports', icon: FileText },
     { name: 'Settings', icon: Settings },
   ];
@@ -120,7 +187,7 @@ export default function DashboardLayout({
                     <Icon size={16} style={{ color: isActive ? theme.accent : undefined }} />
                     <span className="truncate">{item.name}</span>
                   </div>
-                  {item.badge && (
+                  {item.badge !== undefined && item.badge > 0 && (
                     <span className={`${item.badgeColor || 'bg-rose-500'} text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full font-mono`}>
                       {item.badge}
                     </span>
@@ -139,7 +206,8 @@ export default function DashboardLayout({
           <div className="text-[11px] font-bold text-white">DSU Harohalli</div>
           <div className="text-[10px] text-slate-400">Bengaluru, Karnataka</div>
           <div className="text-[9px] font-mono mt-2 flex items-center gap-1.5" style={{ color: theme.accent }}>
-            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: theme.accent }} /> SYSTEM ONLINE
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: theme.accent }} /> 
+            {isConnected ? 'LIVE WEBSOCKET SYNC' : 'REST POLLING ACTIVE'}
           </div>
         </div>
       </aside>
@@ -152,37 +220,36 @@ export default function DashboardLayout({
           className="h-16 backdrop-blur-xl border-b px-6 flex items-center justify-between z-10 shrink-0 transition-colors duration-300"
           style={{ backgroundColor: theme.panelBg, borderColor: theme.borderColor }}
         >
-          <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
-            <button
-              onClick={() => onSelectAspect?.('energy')}
-              className="flex items-center gap-2 bg-red-950/40 hover:bg-red-900/50 border border-red-500/30 px-3 py-1.5 rounded-xl text-xs transition-colors cursor-pointer text-left"
-            >
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-              <span className="text-red-200 font-medium">High Temperature:</span>
-              <span className="text-slate-400 text-[11px]">Lab Block - Room 302</span>
-            </button>
-            <button
-              onClick={() => onSelectAspect?.('energy')}
-              className="flex items-center gap-2 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-500/30 px-3 py-1.5 rounded-xl text-xs transition-colors cursor-pointer text-left"
-            >
-              <span className="w-2 h-2 rounded-full bg-amber-500" />
-              <span className="text-amber-200 font-medium">Power Anomaly:</span>
-              <span className="text-slate-400 text-[11px]">Hostel Block B</span>
-            </button>
-            <button
-              onClick={() => onSelectAspect?.('water')}
-              className="hidden sm:flex items-center gap-2 bg-sky-950/40 hover:bg-sky-900/50 border border-sky-500/30 px-3 py-1.5 rounded-xl text-xs transition-colors cursor-pointer text-left"
-            >
-              <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
-              <span className="text-sky-200 font-medium">Pipe Pressure Drop:</span>
-              <span className="text-slate-400 text-[11px]">Junction W-3</span>
-            </button>
+          <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-2">
+            {activeAlerts.length > 0 ? (
+              activeAlerts.map((alert) => (
+                <button
+                  key={alert.id}
+                  onClick={() => onSelectAspect?.(alert.aspect)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs transition-colors cursor-pointer text-left shrink-0 ${
+                    alert.status === 'critical' || alert.status === 'critical_waste'
+                      ? 'bg-rose-950/50 hover:bg-rose-900/60 border border-rose-500/40 text-rose-200'
+                      : 'bg-amber-950/40 hover:bg-amber-900/50 border border-amber-500/30 text-amber-200'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${alert.status === 'critical' ? 'bg-rose-500 animate-ping' : 'bg-amber-500 animate-pulse'}`} />
+                  <span className="font-semibold">{alert.label}:</span>
+                  <span className="text-slate-300 text-[11px] truncate max-w-[140px]">{alert.name}</span>
+                  <span className="text-[10px] font-mono px-1 rounded bg-black/30 border border-white/10">{alert.detail}</span>
+                </button>
+              ))
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-emerald-400 font-mono px-3 py-1.5 rounded-xl bg-emerald-950/20 border border-emerald-500/30">
+                <ShieldCheck size={15} className="text-emerald-400 shrink-0" />
+                <span>All 36 Campus Zones Nominal • Autonomous Digital Twin Active</span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-4 text-xs font-mono text-slate-400 shrink-0">
             <div>28°C Partly Cloudy</div>
             <div>|</div>
-            <div>Mon, 26 May 2026 16:42</div>
+            <div>{currentDateStr}</div>
           </div>
         </header>
 
@@ -211,30 +278,34 @@ export default function DashboardLayout({
 
           <div className="flex items-center justify-between mb-5">
             <div>
-              <div className="text-3xl font-extrabold text-white tracking-tight">87<span className="text-slate-500 text-lg font-normal"> /100</span></div>
-              <div className="text-xs font-bold mt-0.5" style={{ color: theme.accent }}>Good • Overall campus health</div>
+              <div className="text-3xl font-extrabold text-white tracking-tight">
+                {healthScore}<span className="text-slate-500 text-lg font-normal"> /100</span>
+              </div>
+              <div className="text-xs font-bold mt-0.5" style={{ color: healthScore < 70 ? '#f43f5e' : theme.accent }}>
+                {healthScore >= 85 ? 'Nominal • Systems optimal' : healthScore >= 65 ? 'Warning • Active anomalies' : 'Critical • Interventions required'}
+              </div>
             </div>
             <div 
               className="w-12 h-12 rounded-full border-4 flex items-center justify-center font-bold text-xs"
               style={{
-                borderColor: `${theme.accent}33`,
-                borderTopColor: theme.accent,
-                color: theme.accent,
+                borderColor: `${healthScore < 70 ? '#f43f5e' : theme.accent}33`,
+                borderTopColor: healthScore < 70 ? '#f43f5e' : theme.accent,
+                color: healthScore < 70 ? '#f43f5e' : theme.accent,
               }}
             >
-              87%
+              {healthScore}%
             </div>
           </div>
 
           {/* Subsystem Health Metrics - Wired to Aspect Selection */}
           <div className="space-y-3">
             {[
-              { name: 'Buildings', score: 92, aspect: 'emergency' as AspectType },
-              { name: 'Energy', score: 76, warning: true, aspect: 'energy' as AspectType },
+              { name: 'Buildings', score: activeAlerts.some(a => a.aspect === 'occupancy') ? 78 : 95, aspect: 'emergency' as AspectType },
+              { name: 'Energy', score: activeAlerts.some(a => a.aspect === 'energy') ? 68 : 96, warning: activeAlerts.some(a => a.aspect === 'energy'), aspect: 'energy' as AspectType },
               { name: 'Environment', score: 89, aspect: 'irrigation' as AspectType },
-              { name: 'Security', score: 85, aspect: 'occupancy' as AspectType },
-              { name: 'Facilities', score: 90, aspect: 'water' as AspectType },
-              { name: 'Transport', score: 78, warning: true, aspect: 'parking' as AspectType },
+              { name: 'Security', score: 92, aspect: 'occupancy' as AspectType },
+              { name: 'Facilities', score: activeAlerts.some(a => a.aspect === 'water') ? 54 : 94, warning: activeAlerts.some(a => a.aspect === 'water'), aspect: 'water' as AspectType },
+              { name: 'Transport', score: activeAlerts.some(a => a.aspect === 'parking') ? 72 : 98, warning: activeAlerts.some(a => a.aspect === 'parking'), aspect: 'parking' as AspectType },
             ].map((sys) => (
               <div 
                 key={sys.name} 
@@ -268,47 +339,27 @@ export default function DashboardLayout({
             <Bell size={14} style={{ color: theme.accent }} /> Recent Activity
           </h3>
 
-          <div className="space-y-4 text-xs">
-            <div 
-              onClick={() => onSelectAspect?.('energy')}
-              className="flex items-start gap-3 pb-3 border-b border-white/5 cursor-pointer hover:bg-white/5 p-1 rounded-lg transition-colors"
-            >
-              <span className="w-2 h-2 rounded-full bg-red-500 mt-1 shrink-0" />
-              <div>
-                <p className="text-slate-200 font-medium">High temperature in Lab Block</p>
-                <span className="text-[10px] font-mono text-slate-500">16:35 • Energy Command</span>
+          <div className="space-y-3 text-xs">
+            {activeAlerts.length > 0 ? (
+              activeAlerts.slice(0, 4).map((alert) => (
+                <div 
+                  key={alert.id}
+                  onClick={() => onSelectAspect?.(alert.aspect)}
+                  className="flex items-start gap-3 pb-2.5 border-b border-white/5 cursor-pointer hover:bg-white/5 p-1 rounded-lg transition-colors"
+                >
+                  <span className={`w-2 h-2 rounded-full mt-1 shrink-0 ${alert.status === 'critical' ? 'bg-rose-500 animate-ping' : 'bg-amber-500'}`} />
+                  <div>
+                    <p className="text-slate-200 font-medium">{alert.label}: {alert.name}</p>
+                    <span className="text-[10px] font-mono text-slate-400">{alert.detail} • Live Telemetry</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-slate-400 text-xs py-3 font-mono flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
+                <span>All telemetry streams nominal. No active incident logs.</span>
               </div>
-            </div>
-            <div 
-              onClick={() => onSelectAspect?.('energy')}
-              className="flex items-start gap-3 pb-3 border-b border-white/5 cursor-pointer hover:bg-white/5 p-1 rounded-lg transition-colors"
-            >
-              <span className="w-2 h-2 rounded-full bg-amber-500 mt-1 shrink-0" />
-              <div>
-                <p className="text-slate-200 font-medium">Power anomaly in Hostel Block B</p>
-                <span className="text-[10px] font-mono text-slate-500">16:28 • Energy Command</span>
-              </div>
-            </div>
-            <div 
-              onClick={() => onSelectAspect?.('water')}
-              className="flex items-start gap-3 pb-3 border-b border-white/5 cursor-pointer hover:bg-white/5 p-1 rounded-lg transition-colors"
-            >
-              <span className="w-2 h-2 rounded-full bg-blue-500 mt-1 shrink-0" />
-              <div>
-                <p className="text-slate-200 font-medium">Water leak in Academic Block</p>
-                <span className="text-[10px] font-mono text-slate-500">16:21 • Water Command</span>
-              </div>
-            </div>
-            <div 
-              onClick={() => onSelectAspect?.('irrigation')}
-              className="flex items-start gap-3 cursor-pointer hover:bg-white/5 p-1 rounded-lg transition-colors"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1 shrink-0" />
-              <div>
-                <p className="text-slate-200 font-medium">All irrigation systems operational</p>
-                <span className="text-[10px] font-mono text-slate-500">15:47 • Irrigation Command</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
