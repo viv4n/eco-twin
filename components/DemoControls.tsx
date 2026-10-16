@@ -15,7 +15,7 @@ import {
   FlaskConical, ChevronDown, ChevronUp, Loader2, MessageSquare, Radio
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { API_BASE_URL } from '../utils/config';
+import { API_BASE_URL, getApiBaseUrl } from '../utils/config';
 
 interface ScenarioAction {
   id: string;
@@ -29,7 +29,7 @@ interface ScenarioAction {
 const SCENARIOS: ScenarioAction[] = [
   {
     id: 'water_leak',
-    endpoint: `${API_BASE_URL}/api/trigger/water_leak`,
+    endpoint: '/api/trigger/water_leak',
     label: 'Water Leak',
     icon: Droplets,
     accentColor: '#38bdf8',
@@ -37,7 +37,7 @@ const SCENARIOS: ScenarioAction[] = [
   },
   {
     id: 'cooling_failure',
-    endpoint: `${API_BASE_URL}/api/trigger/cooling_failure`,
+    endpoint: '/api/trigger/cooling_failure',
     label: 'Cooling Failure',
     icon: Snowflake,
     accentColor: '#a78bfa',
@@ -45,7 +45,7 @@ const SCENARIOS: ScenarioAction[] = [
   },
   {
     id: 'hazardous_spill',
-    endpoint: `${API_BASE_URL}/api/trigger/hazardous_spill`,
+    endpoint: '/api/trigger/hazardous_spill',
     label: 'Hazardous Spill',
     icon: AlertTriangle,
     accentColor: '#f43f5e',
@@ -53,7 +53,7 @@ const SCENARIOS: ScenarioAction[] = [
   },
   {
     id: 'energy_waste',
-    endpoint: `${API_BASE_URL}/api/trigger/energy_waste`,
+    endpoint: '/api/trigger/energy_waste',
     label: 'Energy Waste',
     icon: Zap,
     accentColor: '#fbbf24',
@@ -61,7 +61,7 @@ const SCENARIOS: ScenarioAction[] = [
   },
   {
     id: 'parking_congestion',
-    endpoint: `${API_BASE_URL}/api/trigger/parking_congestion`,
+    endpoint: '/api/trigger/parking_congestion',
     label: 'Parking Congestion',
     icon: Car,
     accentColor: '#3b82f6',
@@ -83,8 +83,16 @@ export default function DemoControls() {
       setLoadingId(scenarioId);
       setStatusMessage(null);
 
+      const apiBase = getApiBaseUrl();
+      // Ensure target URL respects apiBase if endpoint is relative and apiBase is specified
+      const targetUrl = endpoint.startsWith('http')
+        ? endpoint
+        : apiBase
+        ? `${apiBase}${endpoint}`
+        : endpoint;
+
       try {
-        let res = await fetch(endpoint, {
+        let res = await fetch(targetUrl, {
           method: 'POST',
           cache: 'no-store',
           headers: {
@@ -95,9 +103,10 @@ export default function DemoControls() {
 
         // Fallback for legacy /api/trigger_demo if /api/trigger returns 404
         if (res.status === 404) {
-          const fallbackUrl = scenarioId === 'reset'
-            ? `${API_BASE_URL}/api/trigger_demo?scenario=OFF`
-            : `${API_BASE_URL}/api/trigger_demo?scenario=${scenarioId}`;
+          const fallbackPath = scenarioId === 'reset'
+            ? '/api/trigger_demo?scenario=OFF'
+            : `/api/trigger_demo?scenario=${scenarioId}`;
+          const fallbackUrl = apiBase ? `${apiBase}${fallbackPath}` : fallbackPath;
           const fallbackRes = await fetch(fallbackUrl, {
             method: 'POST',
             cache: 'no-store',
@@ -135,7 +144,8 @@ export default function DemoControls() {
           setStatusMessage(`⚠ Backend returned status ${res.status}`);
         }
       } catch {
-        setStatusMessage('⚠ Could not reach backend server at ' + API_BASE_URL);
+        const displayHost = apiBase || (typeof window !== 'undefined' ? window.location.origin : '');
+        setStatusMessage(`⚠ Could not reach backend server at ${displayHost || '/api'}`);
       } finally {
         setLoadingId(null);
         setTimeout(() => {
@@ -308,7 +318,7 @@ export default function DemoControls() {
                 {/* Reset All Scenarios Button */}
                 <div className="pt-1.5 border-t" style={{ borderColor: theme.borderColor }}>
                   <button
-                    onClick={() => executeTrigger('reset', `${API_BASE_URL}/api/reset`)}
+                    onClick={() => executeTrigger('reset', '/api/reset')}
                     disabled={loadingId !== null}
                     className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-white/10 hover:bg-white/5 transition-all text-slate-300 hover:text-white text-xs font-mono font-bold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >

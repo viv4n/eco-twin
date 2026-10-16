@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Activity, Zap, ChevronRight, AlertTriangle, Smartphone, Wifi, WifiOff } from 'lucide-react';
 import PredictionGraph from './PredictionGraph';
-import { API_BASE_URL } from '../utils/config';
+import { API_BASE_URL, getApiBaseUrl } from '../utils/config';
 import { useCampusStore } from '../context/CampusStoreContext';
 
 interface DrawerProps {
@@ -231,7 +231,7 @@ export default function Drawer({ isOpen, onClose, zoneId }: DrawerProps) {
                   <span className="font-bold">LIVE OPTICAL CV FEED • {data.name}</span>
                 </div>
                 <img
-                  src={`${API_BASE_URL}/api/v1/vision/feed/${cameraId}`}
+                  src={`${getApiBaseUrl()}/api/v1/vision/feed/${cameraId}`}
                   alt="Live CCTV Camera Feed"
                   className="w-full h-52 object-cover bg-slate-900"
                   onError={(e) => {

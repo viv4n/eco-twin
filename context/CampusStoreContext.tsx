@@ -19,7 +19,7 @@ import React, {
   useMemo,
 } from 'react';
 import { campusZones } from '../campusConfig';
-import { API_BASE_URL, WS_BASE_URL } from '../utils/config';
+import { API_BASE_URL, WS_BASE_URL, getApiBaseUrl, getWsBaseUrl } from '../utils/config';
 import type { ZoneTelemetry } from '../types/api';
 
 // Cross-alias mapping between backend zone keys and frontend campusConfig zone IDs/names
@@ -146,11 +146,14 @@ export function CampusStoreProvider({ children }: { children: React.ReactNode })
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isUnmountedRef = useRef<boolean>(false);
 
-  // 1. Initial REST Load: GET ${API_BASE_URL}/api/v1/telemetry/state with fallback to /api/state
+  // 1. Initial REST Load: GET ${apiBase}/api/v1/telemetry/state with fallback to /api/state
   const fetchInitialState = useCallback(async () => {
+    const apiBase = getApiBaseUrl();
     const urlsToTry = [
-      `${API_BASE_URL}/api/v1/telemetry/state`,
-      `${API_BASE_URL}/api/state`,
+      `${apiBase}/api/v1/telemetry/state`,
+      `${apiBase}/api/state`,
+      '/api/v1/telemetry/state',
+      '/api/state',
     ];
 
     let stateLoaded = false;
@@ -186,16 +189,19 @@ export function CampusStoreProvider({ children }: { children: React.ReactNode })
     setIsLoading(false);
   }, []);
 
-  // 2. WebSocket Live Stream: Connect to ${WS_BASE_URL} (/ws/state)
+  // 2. WebSocket Live Stream: Connect to getWsBaseUrl() (/ws/state)
   const connectWebSocket = useCallback(() => {
     if (isUnmountedRef.current) return;
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
-    const targetWsUrl = WS_BASE_URL.endsWith('/ws')
-      ? `${WS_BASE_URL}/state`
-      : WS_BASE_URL;
+    const wsBase = getWsBaseUrl();
+    const targetWsUrl = wsBase.endsWith('/ws')
+      ? `${wsBase}/state`
+      : wsBase.endsWith('/ws/state')
+      ? wsBase
+      : `${wsBase}/ws/state`;
 
     try {
       const ws = new WebSocket(targetWsUrl);
