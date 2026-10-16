@@ -1,78 +1,30 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
-import DashboardLayout from '@/components/DashboardLayout';
 import Drawer from '@/components/Drawer';
-import AspectWarRoomModal, { AspectType } from '@/components/AspectWarRoomModal';
 import DemoControls from '@/components/DemoControls';
-import { useCampusStore } from '@/context/CampusStoreContext';
 
+// Dynamically import MapCanvas to prevent Leaflet SSR server crashes
 const MapCanvas = dynamic(() => import('@/components/mapcanvas'), { ssr: false });
 
 export default function Home() {
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
-  const [activeAspect, setActiveAspect] = useState<AspectType | null>(null);
-
-  // Live telemetry from backend — updates every 2s via CampusStoreContext
-  const { triggeredZoneIds } = useCampusStore();
-
-  // Sync active aspect with URL search parameter (?aspect=water) on initial mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const aspectParam = params.get('aspect') as AspectType | null;
-      const validAspects: AspectType[] = ['energy', 'water', 'parking', 'occupancy', 'irrigation', 'emergency'];
-      if (aspectParam && validAspects.includes(aspectParam)) {
-        setActiveAspect(aspectParam);
-      }
-    }
-  }, []);
-
-  // Update state and mirror to URL search query string
-  const handleSelectAspect = useCallback((aspect: AspectType | null) => {
-    setActiveAspect(aspect);
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      if (aspect) {
-        url.searchParams.set('aspect', aspect);
-      } else {
-        url.searchParams.delete('aspect');
-      }
-      window.history.pushState({}, '', url.toString());
-    }
-  }, []);
 
   return (
-    <DashboardLayout
-      activeAspect={activeAspect}
-      onSelectAspect={handleSelectAspect}
-    >
-      {/* 1. Underlying Leaflet Map Canvas remains mounted and untouched in the background.
-              triggeredZoneIds are injected from the live backend polling store so that
-              animate-ping markers reflect real backend state — no client-side faking. */}
-      <MapCanvas
-        onSelectZone={(zoneName) => setSelectedZone(zoneName)}
-        triggeredZoneIds={triggeredZoneIds}
-      />
+    <main className="w-screen h-screen relative overflow-hidden bg-slate-950">
+      {/* Map takes full screen */}
+      <MapCanvas onSelectZone={(zoneName) => setSelectedZone(zoneName)} />
 
-      {/* 2. Floating Strategy Drawer Modal for single zone clicks */}
+      {/* Floating HUD Drawer opens when a zone is selected */}
       <Drawer
-        isOpen={Boolean(selectedZone) && !activeAspect}
+        isOpen={Boolean(selectedZone)}
         onClose={() => setSelectedZone(null)}
         zoneId={selectedZone}
       />
 
-      {/* 3. Full-screen Glassmorphism Aspect War Room Overlay Pop-up */}
-      <AspectWarRoomModal
-        isOpen={Boolean(activeAspect)}
-        aspect={activeAspect}
-        onClose={() => handleSelectAspect(null)}
-        onSelectAspect={(asp) => handleSelectAspect(asp)}
-      />
-
-      {/* 4. Demo Remote Control Panel — fires FastAPI scenario triggers */}
+      {/* Demo Scenario Remote Control Panel (bottom-right fixed overlay) */}
       <DemoControls />
-    </DashboardLayout>
+    </main>
   );
 }
