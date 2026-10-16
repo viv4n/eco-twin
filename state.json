@@ -1,0 +1,218 @@
+{
+  "soe_lecture_hall_6": {
+    "name": "SOE Lecture Hall 6",
+    "category": "lecture_hall",
+    "status": "normal",
+    "occupancy": 30
+  },
+  "cafe_2_bits_and_bites": {
+    "name": "Bits and Bites (Cafe 2)",
+    "category": "cafe",
+    "status": "normal",
+    "occupancy": 110
+  },
+  "parking_1": {
+    "name": "Parking 1",
+    "category": "parking",
+    "status": "normal",
+    "occupancy_pct": "88%"
+  },
+  "dsu_arena": {
+    "name": "DSU Arena",
+    "category": "recreation",
+    "status": "normal"
+  },
+  "soe_lecture_hall_5": {
+    "name": "SOE Lecture Hall 5",
+    "category": "lecture_hall",
+    "status": "normal",
+    "occupancy": 120
+  },
+  "soe_lecture_hall_1": {
+    "name": "SOE Lecture Hall 1",
+    "category": "lecture_hall",
+    "status": "normal",
+    "occupancy": 2
+  },
+  "football_stadium": {
+    "name": "Varsity Football Stadium",
+    "category": "sports",
+    "status": "warning",
+    "floodlights_state": "active",
+    "power_consumption_kw": 147.9
+  },
+  "cdsimer_hospital": {
+    "name": "CDSIMER Hospital",
+    "category": "utility",
+    "status": "critical",
+    "system_state": "life_safety_risk",
+    "automated_sms_dispatched": true
+  },
+  "parking_5": {
+    "name": "Parking 5",
+    "category": "parking",
+    "status": "normal",
+    "occupancy_pct": "10%"
+  },
+  "amphitheatre": {
+    "name": "Amphitheatre",
+    "category": "recreation",
+    "status": "normal"
+  },
+  "cafe_4_food_truck": {
+    "name": "Food Truck (Cafe 4)",
+    "category": "cafe",
+    "status": "normal",
+    "occupancy": 45
+  },
+  "a_block": {
+    "name": "A Block",
+    "category": "academic",
+    "status": "normal",
+    "power_consumption_kw": 31.7
+  },
+  "pipe_junction_bwssb_1": {
+    "name": "BWSSB Pipeline Track Node 1",
+    "category": "pipe_sensor",
+    "status": "normal",
+    "water_pressure_psi": 22.0,
+    "leak_detected": false
+  },
+  "nursing_block": {
+    "name": "Nursing Block",
+    "category": "academic",
+    "status": "normal",
+    "hvac_status": "active"
+  },
+  "parking_3": {
+    "name": "Parking 3",
+    "category": "parking",
+    "status": "normal",
+    "occupancy_pct": "95%"
+  },
+  "hostel_mess": {
+    "name": "Hostel Mess",
+    "category": "utility",
+    "status": "normal"
+  },
+  "pharmacy_classroom_1": {
+    "name": "Pharmacy Classroom 1",
+    "category": "classroom",
+    "status": "normal"
+  },
+  "parking_2": {
+    "name": "Parking 2",
+    "category": "parking",
+    "status": "normal",
+    "occupancy_pct": "60%"
+  },
+  "cafe_1_tummy_trails": {
+    "name": "Tummy Trails (Cafe 1)",
+    "category": "cafe",
+    "status": "normal",
+    "occupancy": 85
+  },
+  "health_sciences": {
+    "name": "School of Health Sciences",
+    "category": "academic",
+    "status": "normal",
+    "power_consumption_kw": 41.7
+  },
+  "parking_4": {
+    "name": "Parking 4",
+    "category": "parking",
+    "status": "normal",
+    "occupancy_pct": "40%"
+  },
+  "hostel_1": {
+    "name": "Hostel 1",
+    "category": "residential",
+    "status": "normal"
+  },
+  "soe_lecture_hall_4": {
+    "name": "SOE Lecture Hall 4",
+    "category": "lecture_hall",
+    "status": "normal",
+    "temperature_c": 22.5,
+    "hvac_status": "active"
+  },
+  "main_server_room": {
+    "name": "Main Server Room",
+    "category": "utility",
+    "status": "normal",
+    "system_state": "normal_cooling",
+    "temperature_c": 21.0,
+    "automated_sms_dispatched": true
+  },
+  "girls_hostel_4": {
+    "name": "Girls Hostel 4",
+    "category": "residential",
+    "status": "normal"
+  },
+  "soe_center_of_engineering": {
+    "name": "SOE Center of Engineering",
+    "category": "academic",
+    "status": "normal",
+    "hvac_status": "active",
+    "power_consumption_kw": 45.0,
+    "baseline_variance_pct": "0%"
+  },
+  "soe_classroom_a1": {
+    "name": "Classroom A1",
+    "category": "classroom",
+    "status": "normal",
+    "hvac_status": "eco_mode"
+  },
+  "laundry_facility": {
+    "name": "Laundry Facility",
+    "category": "utility",
+    "status": "normal",
+    "water_usage_lpm": 117
+  },
+  "open_auditorium": {
+    "name": "Open Auditorium",
+    "category": "recreation",
+    "status": "normal"
+  },
+  "cricket_stadium": {
+    "name": "Cricket Stadium",
+    "category": "sports",
+    "status": "normal",
+    "floodlights_state": "offline",
+    "power_consumption_kw": 0.0
+  },
+  "hostel_2": {
+    "name": "Hostel 2",
+    "category": "residential",
+    "status": "normal"
+  },
+  "soe_classroom_b4": {
+    "name": "Classroom B4",
+    "category": "classroom",
+    "status": "normal",
+    "co2_ppm": 450
+  },
+  "soe_lecture_hall_3": {
+    "name": "SOE Lecture Hall 3",
+    "category": "lecture_hall",
+    "status": "normal",
+    "occupancy": 0
+  },
+  "pharmacy_department": {
+    "name": "Pharmacy Department",
+    "category": "academic",
+    "status": "normal",
+    "hvac_status": "eco_mode"
+  },
+  "hostel_3": {
+    "name": "Hostel 3",
+    "category": "residential",
+    "status": "normal"
+  },
+  "soe_lecture_hall_2": {
+    "name": "SOE Lecture Hall 2",
+    "category": "lecture_hall",
+    "status": "normal",
+    "occupancy": 45
+  }
+}
