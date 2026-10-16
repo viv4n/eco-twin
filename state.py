@@ -1,35 +1,17 @@
 import json
 import os
+import copy
 from pathlib import Path
-from typing import Dict, Any, Tuple
-from demo_payloads import DEMO_PAYLOADS
+from typing import Dict, Any
+
+import demo_payloads
 
 STATE_FILE = Path(__file__).resolve().parent / "state.json"
 TMP_FILE = Path(__file__).resolve().parent / "state.json.tmp"
-VALID_STATUSES = {"normal", "low", "warning", "critical"}
+VALID_STATUSES = {"normal", "low", "warning", "critical", "critical_waste"}
 
-BASELINE_STATE = {
-    "_meta": {
-        "demo_mode": False
-    },
-    "lecture_hall_a": {
-        "status": "normal",
-        "occupancy": 30,
-        "hvac": "active"
-    },
-    "science_block": {
-        "status": "normal",
-        "water_flow": "stable"
-    },
-    "cafeteria": {
-        "status": "normal",
-        "waste_level": "40%"
-    },
-    "main_lot": {
-        "status": "normal",
-        "occupancy_rate": "68%"
-    }
-}
+BASELINE_STATE = copy.deepcopy(demo_payloads.BASELINE_STATE)
+BASELINE_STATE["_meta"] = {"demo_mode": False}
 
 
 def _coerce_status(status: Any) -> str:
@@ -37,9 +19,9 @@ def _coerce_status(status: Any) -> str:
 
 
 def _sanitize_state(data: Any) -> Dict[str, Any]:
-    """Keep only the approved baseline keys and valid status strings."""
+    """Sanitize state preserving all 36 DSU building keys, legacy aliases, and valid statuses."""
     if not isinstance(data, dict):
-        return json.loads(json.dumps(BASELINE_STATE))
+        return copy.deepcopy(BASELINE_STATE)
 
     sanitized: Dict[str, Any] = {
         "_meta": {
@@ -47,7 +29,11 @@ def _sanitize_state(data: Any) -> Dict[str, Any]:
         }
     }
 
-    for key in ("lecture_hall_a", "science_block", "cafeteria", "main_lot"):
+    # Include all keys from input and baseline
+    all_keys = set(BASELINE_STATE.keys()) | set(data.keys())
+    for key in all_keys:
+        if key == "_meta":
+            continue
         zone_data = data.get(key, BASELINE_STATE.get(key, {}))
         if not isinstance(zone_data, dict):
             zone_data = {}
@@ -70,7 +56,8 @@ def read_state() -> Dict[str, Any]:
                 return reset_state()
             return _sanitize_state(json.loads(content))
     except Exception:
-        return json.loads(json.dumps(BASELINE_STATE))
+        return copy.deepcopy(BASELINE_STATE)
+
 
 def write_state(data: Dict[str, Any]) -> None:
     """Atomic state persistence: write to state.json.tmp, then os.replace."""
@@ -78,14 +65,17 @@ def write_state(data: Dict[str, Any]) -> None:
         json.dump(data, f, indent=2)
     os.replace(TMP_FILE, STATE_FILE)
 
+
 def reset_state() -> Dict[str, Any]:
     """
     Resets state to baseline.
     Sets _meta.demo_mode to False.
     """
-    state = json.loads(json.dumps(BASELINE_STATE))
+    state = copy.deepcopy(BASELINE_STATE)
+    state["_meta"]["demo_mode"] = False
     write_state(state)
     return state
+
 
 def update_state(incoming_data: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -116,32 +106,10 @@ def update_state(incoming_data: Dict[str, Any]) -> Dict[str, Any]:
 
 def trigger_demo(scenario_id: str) -> Dict[str, Any]:
     """
-    Triggers a demo scenario.
-    Sets _meta.demo_mode to True.
-    Applies the scenario patch to the designated zone in state.json.
+    Triggers a demo scenario using the complete DSU telemetry generator.
+    Sets _meta.demo_mode to True and saves atomically.
     """
-    if scenario_id not in DEMO_PAYLOADS:
-        raise ValueError(f"Unknown scenario_id: {scenario_id}")
-
-    zone_key, patch = DEMO_PAYLOADS[scenario_id]
-    current_state = read_state()
-
-    # Ensure _meta exists and set demo_mode to True
-    if "_meta" not in current_state or not isinstance(current_state["_meta"], dict):
-        current_state["_meta"] = {}
-    current_state["_meta"]["demo_mode"] = True
-
-    if isinstance(patch, dict) and "status" in patch:
-        patch["status"] = _coerce_status(patch["status"])
-
-    # Patch the targeted zone
-    if zone_key in current_state and isinstance(current_state[zone_key], dict):
-        current_state[zone_key].update(patch)
-    else:
-        current_state[zone_key] = patch
-
-    if isinstance(current_state[zone_key], dict) and "status" in current_state[zone_key]:
-        current_state[zone_key]["status"] = _coerce_status(current_state[zone_key]["status"])
-
-    write_state(_sanitize_state(current_state))
-    return _sanitize_state(current_state)
+    scenario_state = demo_payloads.get_scenario(scenario_id)
+    scenario_state["_meta"] = {"demo_mode": True}
+    write_state(_sanitize_state(scenario_state))
+    return read_state()
